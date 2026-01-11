@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Minus, ShoppingCart, X } from "lucide-react";
 
 interface MenuItem {
   id: string;
@@ -13,6 +14,10 @@ interface MenuCategory {
   id: string;
   name: string;
   items: MenuItem[];
+}
+
+interface CartItem extends MenuItem {
+  quantity: number;
 }
 
 const menuData: MenuCategory[] = [
@@ -76,7 +81,17 @@ function VegIndicator({ isVeg }: { isVeg: boolean }) {
   );
 }
 
-function MenuCard({ item }: { item: MenuItem }) {
+function MenuCard({ 
+  item, 
+  quantity, 
+  onAdd, 
+  onRemove 
+}: { 
+  item: MenuItem; 
+  quantity: number;
+  onAdd: () => void;
+  onRemove: () => void;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -98,10 +113,40 @@ function MenuCard({ item }: { item: MenuItem }) {
             {item.description}
           </p>
         </div>
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 flex flex-col items-end gap-2">
           <span className="font-display font-semibold text-primary text-lg" data-testid={`item-price-${item.id}`}>
             ₹{item.price}
           </span>
+          {quantity === 0 ? (
+            <button
+              onClick={onAdd}
+              className="flex items-center gap-1 px-3 py-1.5 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
+              data-testid={`add-btn-${item.id}`}
+            >
+              <Plus size={14} />
+              Add
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 bg-primary/10 rounded-full px-1">
+              <button
+                onClick={onRemove}
+                className="w-7 h-7 flex items-center justify-center text-primary hover:bg-primary/20 rounded-full transition-colors"
+                data-testid={`remove-btn-${item.id}`}
+              >
+                <Minus size={14} />
+              </button>
+              <span className="font-semibold text-primary min-w-[20px] text-center" data-testid={`qty-${item.id}`}>
+                {quantity}
+              </span>
+              <button
+                onClick={onAdd}
+                className="w-7 h-7 flex items-center justify-center text-primary hover:bg-primary/20 rounded-full transition-colors"
+                data-testid={`increase-btn-${item.id}`}
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -154,7 +199,35 @@ function CategoryNav({
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState(menuData[0].id);
+  const [cart, setCart] = useState<Record<string, CartItem>>({});
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  const addToCart = (item: MenuItem) => {
+    setCart((prev) => {
+      const existing = prev[item.id];
+      if (existing) {
+        return { ...prev, [item.id]: { ...existing, quantity: existing.quantity + 1 } };
+      }
+      return { ...prev, [item.id]: { ...item, quantity: 1 } };
+    });
+  };
+
+  const removeFromCart = (itemId: string) => {
+    setCart((prev) => {
+      const existing = prev[itemId];
+      if (!existing) return prev;
+      if (existing.quantity <= 1) {
+        const { [itemId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [itemId]: { ...existing, quantity: existing.quantity - 1 } };
+    });
+  };
+
+  const cartItems = Object.values(cart);
+  const cartTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   useEffect(() => {
     const observerOptions = {
@@ -241,18 +314,122 @@ export default function Home() {
             </div>
             <div className="grid gap-3">
               {category.items.map((item) => (
-                <MenuCard key={item.id} item={item} />
+                <MenuCard 
+                  key={item.id} 
+                  item={item} 
+                  quantity={cart[item.id]?.quantity || 0}
+                  onAdd={() => addToCart(item)}
+                  onRemove={() => removeFromCart(item.id)}
+                />
               ))}
             </div>
           </section>
         ))}
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t border-border py-3 px-4 text-center">
-        <p className="text-muted-foreground text-xs">
-          All prices inclusive of taxes • Menu items subject to availability
-        </p>
-      </footer>
+      <AnimatePresence>
+        {cartCount > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-0 left-0 right-0 bg-primary text-primary-foreground p-4 shadow-lg"
+          >
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="w-full flex items-center justify-between"
+              data-testid="view-cart-btn"
+            >
+              <div className="flex items-center gap-2">
+                <ShoppingCart size={20} />
+                <span className="font-medium">{cartCount} item{cartCount > 1 ? 's' : ''}</span>
+              </div>
+              <span className="font-display font-semibold text-lg">₹{cartTotal}</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isCartOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50"
+            onClick={() => setIsCartOpen(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="absolute bottom-0 left-0 right-0 bg-background rounded-t-2xl max-h-[80vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h2 className="font-display text-xl font-semibold">Your Cart</h2>
+                <button
+                  onClick={() => setIsCartOpen(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+                  data-testid="close-cart-btn"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="overflow-y-auto max-h-[60vh] p-4">
+                {cartItems.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">Your cart is empty</p>
+                ) : (
+                  <div className="space-y-3">
+                    {cartItems.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between gap-3 py-2" data-testid={`cart-item-${item.id}`}>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <VegIndicator isVeg={item.isVeg} />
+                            <span className="font-medium truncate">{item.name}</span>
+                          </div>
+                          <span className="text-muted-foreground text-sm">₹{item.price} each</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => removeFromCart(item.id)}
+                            className="w-7 h-7 flex items-center justify-center bg-muted rounded-full hover:bg-muted/80 transition-colors"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className="font-semibold min-w-[20px] text-center">{item.quantity}</span>
+                          <button
+                            onClick={() => addToCart(item)}
+                            className="w-7 h-7 flex items-center justify-center bg-muted rounded-full hover:bg-muted/80 transition-colors"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                        <span className="font-display font-semibold text-primary">₹{item.price * item.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {cartItems.length > 0 && (
+                <div className="p-4 border-t border-border bg-muted/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-muted-foreground">Total</span>
+                    <span className="font-display text-2xl font-bold text-primary">₹{cartTotal}</span>
+                  </div>
+                  <button
+                    className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors"
+                    data-testid="checkout-btn"
+                  >
+                    Proceed to Checkout
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
