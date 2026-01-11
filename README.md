@@ -17,7 +17,7 @@ It is optimized for **QR-code based menus** and smooth single-page navigation.
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Tech Stack    
 
 - **Frontend:** HTML, CSS, JavaScript (Vite-based setup)
 - **Development Tool:** Replit
@@ -26,4 +26,6 @@ It is optimized for **QR-code based menus** and smooth single-page navigation.
 ---
 
 ## 📂 Project Structure
+- made by me srv and the best thing about it is its completely made at front end page themed and easy to create and an easy management system for one stop solution ,,
+- thanks !!!!  
 
