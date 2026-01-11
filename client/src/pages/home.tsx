@@ -197,10 +197,20 @@ function CategoryNav({
   );
 }
 
+function generateOrderCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState(menuData[0].id);
   const [cart, setCart] = useState<Record<string, CartItem>>({});
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [orderCode] = useState(() => generateOrderCode());
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const addToCart = (item: MenuItem) => {
@@ -268,24 +278,39 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
-        <div className="px-4 py-4 text-center">
-          <motion.h1 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="font-display text-2xl md:text-3xl font-bold text-foreground tracking-tight"
-            data-testid="restaurant-name"
+        <div className="px-4 py-4 flex items-center justify-between">
+          <div className="w-10" />
+          <div className="text-center flex-1">
+            <motion.h1 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="font-display text-2xl md:text-3xl font-bold text-foreground tracking-tight"
+              data-testid="restaurant-name"
+            >
+              Saffron Kitchen
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="text-muted-foreground text-sm mt-1"
+              data-testid="restaurant-tagline"
+            >
+              Authentic Flavors, Timeless Traditions
+            </motion.p>
+          </div>
+          <button
+            onClick={() => setIsCartOpen(true)}
+            className="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+            data-testid="header-cart-btn"
           >
-            Saffron Kitchen
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="text-muted-foreground text-sm mt-1"
-            data-testid="restaurant-tagline"
-          >
-            Authentic Flavors, Timeless Traditions
-          </motion.p>
+            <ShoppingCart size={22} className="text-foreground" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center">
+                {cartCount}
+              </span>
+            )}
+          </button>
         </div>
         <CategoryNav 
           categories={menuData} 
@@ -368,7 +393,12 @@ export default function Home() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between p-4 border-b border-border">
-                <h2 className="font-display text-xl font-semibold">Your Cart</h2>
+                <div>
+                  <h2 className="font-display text-xl font-semibold">Your Cart</h2>
+                  <p className="text-muted-foreground text-sm">
+                    Order Code: <span className="font-mono font-semibold text-primary" data-testid="order-code">{orderCode}</span>
+                  </p>
+                </div>
                 <button
                   onClick={() => setIsCartOpen(false)}
                   className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
